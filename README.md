@@ -7,12 +7,17 @@ supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate
 
 cpu and heap profiles are enabled always other types can be enabled as required.
 
-## enabling profiling
+## using sf-go-profiler for profiling
 
-```
- profile := profiler.NewProfilerConfig("server")
- profile.Start()
- defer profile.Stop()
+```go
+import "github.com/snappyflow/sf-go-profiler/profiler"
+
+main(){}
+    profile := profiler.NewProfilerConfig("server")
+    profile.Start()
+    defer profile.Stop()
+    // rest of the application code
+}
 ```
 
 ## documentation
