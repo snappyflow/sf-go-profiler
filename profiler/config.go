@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -15,6 +16,7 @@ const (
 	goroutine    = "goroutine"
 	allocs       = "allocs"
 	threadcreate = "threadcreate"
+	metrics      = "metrics"
 )
 
 const (
@@ -35,18 +37,37 @@ const (
 )
 
 var (
-	allProfiles     = []string{cpu, heap, block, mutex, goroutine, allocs, threadcreate}
-	defaultProfiles = []string{cpu, heap}
+	allProfiles     = []string{threadcreate, block, mutex, goroutine, allocs, heap, cpu}
+	defaultProfiles = []string{heap, cpu}
 	logger          = log.New(os.Stdout, "[go profiler] ", log.Ldate|log.Ltime|log.Lshortfile|log.Lmicroseconds)
 	defaultlogf     = func(format string, v ...interface{}) { logger.Printf(format+"\n", v...) }
 )
 
+type commonData struct {
+	Timestamp int64  `json:"timestamp,omitempty"`
+	Type      string `json:"type,omitempty"`
+	PID       int    `json:"pid,omitempty"`
+	Service   string `json:"service,omitempty"`
+	GoVersion string `json:"go_version,omitempty"`
+	Hostname  string `json:"hostname,omitempty"`
+}
+type profileData struct {
+	commonData
+	Data []byte `json:"data,omitempty"`
+}
+
+type metricsData struct {
+	commonData
+	NumGoroutines int              `json:"num_goroutines,omitempty"`
+	MemStats      runtime.MemStats `json:"mem_stats,omitempty"`
+}
 type Config struct {
 	duration     time.Duration
 	interval     time.Duration
 	profileTypes []string
 	cancel       context.CancelFunc
-	out          chan pprofData
+	outProfile   chan profileData
+	outMetrics   chan metricsData
 	service      string
 	dumpToFile   bool
 	targetURL    string
@@ -63,7 +84,8 @@ func NewProfilerConfig(service string) *Config {
 		duration:     DefaultCPUProfileDuration,
 		interval:     DefaultProfileInterval,
 		profileTypes: defaultProfiles,
-		out:          make(chan pprofData, len(allProfiles)+1),
+		outProfile:   make(chan profileData, len(allProfiles)+1),
+		outMetrics:   make(chan metricsData, 1),
 		dumpToFile:   false,
 		targetURL:    DefaultAgentURL,
 		customTarget: false,

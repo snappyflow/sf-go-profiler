@@ -16,16 +16,6 @@ import (
 	"time"
 )
 
-type pprofData struct {
-	Timestamp int64  `json:"timestamp,omitempty"`
-	Type      string `json:"type,omitempty"`
-	Data      []byte `json:"data,omitempty"`
-	PID       int    `json:"pid,omitempty"`
-	Service   string `json:"service,omitempty"`
-	GoVersion string `json:"go_version,omitempty"`
-	Hostname  string `json:"hostname,omitempty"`
-}
-
 func sleepWithContext(ctx context.Context, delay time.Duration) {
 	select {
 	case <-ctx.Done():
@@ -83,10 +73,8 @@ func (cfg *Config) run(ctx context.Context) {
 		case <-ticker.C:
 			for _, t := range cfg.profileTypes {
 
-				var (
-					p   pprofData
-					err error
-				)
+				var p profileData
+				var err error
 
 				p.Timestamp = time.Now().UnixNano()
 				p.Type = t
@@ -113,7 +101,7 @@ func (cfg *Config) run(ctx context.Context) {
 				// add collected data
 				p.Data = buff.Bytes()
 				// send data
-				cfg.out <- p
+				cfg.outProfile <- p
 			}
 		}
 	}
@@ -131,6 +119,8 @@ func (cfg *Config) Start() {
 	}
 	// start profiler
 	go cfg.run(ctx)
+	// start runtime metrics collector
+	go cfg.collectRuntimeMetrics(ctx)
 }
 
 // Stop profile collection

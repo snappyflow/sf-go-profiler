@@ -1,6 +1,6 @@
 # sf-go-profiler
 
-sf-apm-profiler enables collecting supported profiles types by golang
+sf-apm-profiler enables collecting supported profiles types by golang along with runtime metrics
 and sends them to SnappyFlowAPM for further visualization and analysis.
 
 supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate

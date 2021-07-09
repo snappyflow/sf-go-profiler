@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -36,34 +37,51 @@ func (cfg *Config) sendToAgent(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case d := <-cfg.out:
+		case p := <-cfg.outProfile:
 			// base64 encode pprof data
-			d.Data = []byte(base64.StdEncoding.EncodeToString(d.Data))
-			body, err := json.Marshal(d)
-			if err != nil {
-				cfg.logf("failed to marshal %s profile data %s", d.Type, err)
-				break
-			}
+			p.Data = []byte(base64.StdEncoding.EncodeToString(p.Data))
 
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(body))
+			err := pushToAgent(ctx, target, p)
 			if err != nil {
-				cfg.logf("failed to create %s profile request %s", d.Type, err)
-				break
-			}
-			req.Header.Set("Content-Type", "application/json")
-
-			resp, err := httpclient.Do(req)
-			if err != nil {
-				cfg.logf("failed to send %s profile data, %s", d.Type, err)
-				break
-			}
-			if resp.StatusCode != http.StatusOK {
-				cfg.logf("failed to send %s profile collected at %d response %s", d.Type, d.Timestamp, resp.Status)
+				cfg.logf("failed to send %s profile, error: %s", p.Type, err)
 			} else {
-				cfg.logf("sent %s profile collected at %d response %s", d.Type, d.Timestamp, resp.Status)
+				cfg.logf("sent %s profile collected at %d", p.Type, p.Timestamp)
 			}
+
+		case m := <-cfg.outMetrics:
+			err := pushToAgent(ctx, target, m)
+			if err != nil {
+				cfg.logf("failed to send metrics collected at %s, error: %s", m.Timestamp, err)
+			} else {
+				cfg.logf("sent metrics collected at %d", m.Timestamp)
+			}
+
 		}
 	}
+}
+
+func pushToAgent(ctx context.Context, target string, data interface{}) error {
+
+	body, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpclient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("failed to send data " + resp.Status)
+	}
+
+	return nil
 }
 
 func (cfg *Config) writeToFile(ctx context.Context) {
@@ -73,7 +91,7 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 	// create directory
 	_, err := os.Stat(DefaultProfilesDir)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(DefaultProfilesDir, 0644)
+		err := os.Mkdir(DefaultProfilesDir, 0755)
 		if err != nil {
 			cfg.logf("failed to create directory %s", err)
 		}
@@ -87,15 +105,31 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case d := <-cfg.out:
+		case p := <-cfg.outProfile:
 			file := path.Join(
 				DefaultProfilesDir,
-				fmt.Sprintf("%s_%d_%d.%s", cfg.service, d.Timestamp, d.PID, d.Type),
+				fmt.Sprintf("%s_%d_%d.%s", cfg.service, p.Timestamp, p.PID, p.Type),
 			)
-			err := ioutil.WriteFile(file, d.Data, 0644)
+			err := ioutil.WriteFile(file, p.Data, 0644)
 			if err != nil {
-				cfg.logf("failed to write profile %s, %s", d.Type, err)
+				cfg.logf("failed to write profile %s, %s", p.Type, err)
 			}
+
+		case m := <-cfg.outMetrics:
+			file := path.Join(
+				DefaultProfilesDir,
+				fmt.Sprintf("%s_%d_%d.json", cfg.service, m.Timestamp, m.PID),
+			)
+			data, err := json.MarshalIndent(m, "", "  ")
+			if err != nil {
+				cfg.logf("failed to marshal metrics data %s", err)
+				break
+			}
+			err = ioutil.WriteFile(file, data, 0644)
+			if err != nil {
+				cfg.logf("failed to write metrics %s", err)
+			}
+
 		}
 	}
 }
