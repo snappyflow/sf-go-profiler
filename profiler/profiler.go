@@ -16,6 +16,11 @@ import (
 	"time"
 )
 
+type profileData struct {
+	commonData
+	Data []byte `json:"data,omitempty"`
+}
+
 func sleepWithContext(ctx context.Context, delay time.Duration) {
 	select {
 	case <-ctx.Done():
@@ -53,7 +58,7 @@ func getProfile(name string, buff *bytes.Buffer) error {
 	return nil
 }
 
-func (cfg *Config) run(ctx context.Context) {
+func (cfg *Config) collectProfiles(ctx context.Context) {
 	ticker := time.NewTicker(cfg.interval)
 	defer ticker.Stop()
 
@@ -118,7 +123,7 @@ func (cfg *Config) Start() {
 		go cfg.sendToAgent(ctx)
 	}
 	// start profiler
-	go cfg.run(ctx)
+	go cfg.collectProfiles(ctx)
 	// start runtime metrics collector
 	go cfg.collectRuntimeMetrics(ctx)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"runtime"
 	"time"
 )
 
@@ -51,16 +50,7 @@ type commonData struct {
 	GoVersion string `json:"go_version,omitempty"`
 	Hostname  string `json:"hostname,omitempty"`
 }
-type profileData struct {
-	commonData
-	Data []byte `json:"data,omitempty"`
-}
 
-type metricsData struct {
-	commonData
-	NumGoroutines int              `json:"num_goroutines,omitempty"`
-	MemStats      runtime.MemStats `json:"mem_stats,omitempty"`
-}
 type Config struct {
 	duration     time.Duration
 	interval     time.Duration

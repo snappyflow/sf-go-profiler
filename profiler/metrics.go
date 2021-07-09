@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+type metricsData struct {
+	commonData
+	NumGoroutines int              `json:"num_goroutines,omitempty"`
+	MemStats      runtime.MemStats `json:"mem_stats,omitempty"`
+}
+
 func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 	ticker := time.NewTicker(cfg.interval)
 	defer ticker.Stop()
