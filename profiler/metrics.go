@@ -9,8 +9,17 @@ import (
 
 type metricsData struct {
 	commonData
-	NumGoroutines int              `json:"num_goroutines,omitempty"`
-	MemStats      runtime.MemStats `json:"mem_stats,omitempty"`
+	Alloc         uint64 `json:"alloc,omitempty"`
+	TotalAlloc    uint64 `json:"total_alloc,omitempty"`
+	Sys           uint64 `json:"sys,omitempty"`
+	Mallocs       uint64 `json:"mallocs,omitempty"`
+	Frees         uint64 `json:"frees,omitempty"`
+	LiveObjects   uint64 `json:"live_objects,omitempty"`
+	PauseTotalNs  uint64 `json:"pause_total_ns,omitempty"`
+	NumGC         uint32 `json:"num_gc,omitempty"`
+	NumCPU        int    `json:"num_cpu,omitempty"`
+	NumCgoCall    int64  `json:"num_cgo_call,omitempty"`
+	NumGoroutines int    `json:"num_goroutines,omitempty"`
 }
 
 func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
@@ -37,7 +46,21 @@ func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 			d.Hostname = hostname
 			d.Service = cfg.service
 			d.NumGoroutines = runtime.NumGoroutine()
-			runtime.ReadMemStats(&d.MemStats)
+			d.NumCPU = runtime.NumCPU()
+			d.NumCgoCall = runtime.NumCgoCall()
+
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+
+			d.Alloc = m.Alloc
+			d.TotalAlloc = m.TotalAlloc
+			d.Sys = m.Sys
+			d.Mallocs = m.Mallocs
+			d.Frees = m.Frees
+			d.LiveObjects = m.Mallocs - m.Frees
+			d.PauseTotalNs = m.PauseTotalNs
+			d.NumGC = m.NumGC
+
 			cfg.outMetrics <- d
 		}
 	}
