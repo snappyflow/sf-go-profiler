@@ -111,18 +111,18 @@ func main() {
 		}
 	}(done)
 
-	go func(done chan struct{}) {
-		timer := time.NewTicker(5 * time.Second)
-		defer timer.Stop()
-		for {
-			select {
-			case <-timer.C:
-				deallocate()
-			case <-done:
-				return
-			}
-		}
-	}(done)
+	// go func(done chan struct{}) {
+	// 	timer := time.NewTicker(5 * time.Second)
+	// 	defer timer.Stop()
+	// 	for {
+	// 		select {
+	// 		case <-timer.C:
+	// 			deallocate()
+	// 		case <-done:
+	// 			return
+	// 		}
+	// 	}
+	// }(done)
 
 	<-killSignal
 	close(done)

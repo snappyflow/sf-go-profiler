@@ -19,18 +19,27 @@ var httpclient = &http.Client{
 	Transport: http.DefaultTransport,
 }
 
-func (cfg *Config) detectTargetURL() string {
+func (cfg *Config) detectTargetURL(ctx context.Context) string {
 	if cfg.customTarget {
 		return cfg.targetURL
 	}
 	// logic to detect default url
 	// needed for deciding data sent to forwarder or agent
+	var err error
+	err = checkTarget(ctx, DefaultClusterForwarderURL)
+	if err == nil {
+		cfg.targetURL = DefaultClusterForwarderURL
+	}
+	err = checkTarget(ctx, DefaultAgentURL)
+	if err == nil {
+		cfg.targetURL = DefaultAgentURL
+	}
 	return cfg.targetURL
 }
 
 func (cfg *Config) sendToAgent(ctx context.Context) {
 
-	target := cfg.detectTargetURL()
+	target := cfg.detectTargetURL(ctx)
 	cfg.logf("sending profile data to url %s", target)
 
 	for {
@@ -39,13 +48,13 @@ func (cfg *Config) sendToAgent(ctx context.Context) {
 			return
 		case p := <-cfg.outProfile:
 			// base64 encode pprof data
-			p.Data = []byte(base64.StdEncoding.EncodeToString(p.Data))
+			p.Profile = []byte(base64.StdEncoding.EncodeToString(p.Profile))
 
 			err := pushToAgent(ctx, target, p)
 			if err != nil {
-				cfg.logf("failed to send %s profile, error: %s", p.Type, err)
+				cfg.logf("failed to send %s profile, error: %s", p.ProfileType, err)
 			} else {
-				cfg.logf("sent %s profile collected at %d", p.Type, p.Timestamp)
+				cfg.logf("sent %s profile collected at %d", p.ProfileType, p.Timestamp)
 			}
 
 		case m := <-cfg.outMetrics:
@@ -84,6 +93,25 @@ func pushToAgent(ctx context.Context, target string, data interface{}) error {
 	return nil
 }
 
+func checkTarget(ctx context.Context, target string) error {
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpclient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(resp.Status)
+	}
+
+	return nil
+}
+
 func (cfg *Config) writeToFile(ctx context.Context) {
 	// start remove routine
 	go cfg.removeOldFiles(ctx)
@@ -110,7 +138,7 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 				DefaultProfilesDir,
 				fmt.Sprintf("%s_%d_%d.%s", cfg.service, p.Timestamp, p.PID, p.Type),
 			)
-			err := ioutil.WriteFile(file, p.Data, 0644)
+			err := ioutil.WriteFile(file, p.Profile, 0644)
 			if err != nil {
 				cfg.logf("failed to write profile %s, %s", p.Type, err)
 			}

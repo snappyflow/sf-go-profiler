@@ -16,6 +16,7 @@ const (
 	allocs       = "allocs"
 	threadcreate = "threadcreate"
 	metrics      = "metrics"
+	profile      = "profile"
 )
 
 const (
@@ -26,7 +27,10 @@ const (
 	DefaultProfilesAge = 900 * time.Second
 
 	// default url to send profiles to agent
-	DefaultAgentURL = "http://127.0.0.1:8586/profile"
+	DefaultAgentURL = "http://127.0.0.1:8588"
+
+	// default url to send profiles to agent
+	DefaultClusterForwarderURL = "http://forwarder.sfagent.svc"
 
 	// default cpu profile duration
 	DefaultCPUProfileDuration = 10 * time.Second

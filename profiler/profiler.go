@@ -18,7 +18,8 @@ import (
 
 type profileData struct {
 	commonData
-	Data []byte `json:"data,omitempty"`
+	Profile     []byte `json:"data,omitempty"`
+	ProfileType string `json:"profile_type,omitempty"`
 }
 
 func sleepWithContext(ctx context.Context, delay time.Duration) {
@@ -26,6 +27,18 @@ func sleepWithContext(ctx context.Context, delay time.Duration) {
 	case <-ctx.Done():
 	case <-time.After(delay):
 	}
+}
+
+func getEnv(key, fallback string) string {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		value = fallback
+	}
+	return value
+}
+
+func unixMillNow() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
 func cpuprofile(ctx context.Context, duration time.Duration, buff *bytes.Buffer) error {
@@ -81,12 +94,13 @@ func (cfg *Config) collectProfiles(ctx context.Context) {
 				var p profileData
 				var err error
 
-				p.Timestamp = time.Now().UnixNano()
-				p.Type = t
+				p.Timestamp = unixMillNow()
+				p.Type = profile
 				p.PID = pid
 				p.GoVersion = v
 				p.Hostname = hostname
 				p.Service = cfg.service
+				p.ProfileType = t
 
 				buff.Reset()
 
@@ -104,7 +118,7 @@ func (cfg *Config) collectProfiles(ctx context.Context) {
 					continue
 				}
 				// add collected data
-				p.Data = buff.Bytes()
+				p.Profile = buff.Bytes()
 				// send data
 				cfg.outProfile <- p
 			}
