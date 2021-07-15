@@ -136,11 +136,11 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 		case p := <-cfg.outProfile:
 			file := path.Join(
 				DefaultProfilesDir,
-				fmt.Sprintf("%s_%d_%d.%s", cfg.service, p.Timestamp, p.PID, p.Type),
+				fmt.Sprintf("%s_%d_%d.%s", cfg.service, p.Timestamp, p.PID, p.ProfileType),
 			)
 			err := ioutil.WriteFile(file, p.Profile, 0644)
 			if err != nil {
-				cfg.logf("failed to write profile %s, %s", p.Type, err)
+				cfg.logf("failed to write profile %s, %s", p.ProfileType, err)
 			}
 
 		case m := <-cfg.outMetrics:
