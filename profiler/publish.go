@@ -123,7 +123,8 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 		if err != nil {
 			cfg.logf("failed to create directory %s", err)
 		}
-	} else {
+	}
+	if err != nil {
 		cfg.logf("failed to list directory %s", err)
 	}
 
