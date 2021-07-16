@@ -61,6 +61,7 @@ type commonData struct {
 
 type Config struct {
 	collectProfiles bool
+	ackProfile      chan struct{}
 	collectMetrics  bool
 	duration        time.Duration
 	interval        time.Duration
@@ -82,11 +83,12 @@ func NewProfilerConfig(service string) *Config {
 	return &Config{
 		collectProfiles: true,
 		collectMetrics:  true,
+		ackProfile:      make(chan struct{}, 1),
 		service:         service,
 		duration:        DefaultCPUProfileDuration,
 		interval:        DefaultProfileInterval,
 		profileTypes:    defaultProfiles,
-		outProfile:      make(chan profileData, len(allProfiles)+1),
+		outProfile:      make(chan profileData, 1),
 		outMetrics:      make(chan metricsData, 1),
 		dumpToFile:      false,
 		targetURL:       DefaultAgentURL,

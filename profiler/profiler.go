@@ -123,6 +123,8 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 				p.Profile = buff.Bytes()
 				// send data
 				cfg.outProfile <- p
+				//wait till profile is processed
+				<-cfg.ackProfile
 			}
 		}
 	}
@@ -133,13 +135,13 @@ func (cfg *Config) Start() {
 	var ctx context.Context
 	ctx, cfg.cancel = context.WithCancel(context.Background())
 	// start publish
+	if cfg.dumpToFile {
+		go cfg.writeToFile(ctx)
+	} else {
+		go cfg.sendToAgent(ctx)
+	}
+	// start profiler
 	if cfg.collectProfiles {
-		if cfg.dumpToFile {
-			go cfg.writeToFile(ctx)
-		} else {
-			go cfg.sendToAgent(ctx)
-		}
-		// start profiler
 		go cfg.gatherProfiles(ctx)
 	}
 	// start runtime metrics collector

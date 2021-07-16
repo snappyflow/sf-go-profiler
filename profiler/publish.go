@@ -47,8 +47,12 @@ func (cfg *Config) sendToAgent(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case p := <-cfg.outProfile:
+			tmp := make([]byte, len(p.Profile))
+			copy(tmp, p.Profile)
 			// base64 encode pprof data
-			p.Profile = []byte(base64.StdEncoding.EncodeToString(p.Profile))
+			p.Profile = []byte(base64.StdEncoding.EncodeToString(tmp))
+			// ack profile received
+			cfg.ackProfile <- struct{}{}
 
 			err := pushToAgent(ctx, target, p)
 			if err != nil {
