@@ -8,15 +8,17 @@ import (
 )
 
 const (
-	cpu          = "cpu"
-	heap         = "heap"
-	block        = "block"
-	mutex        = "mutex"
-	goroutine    = "goroutine"
-	allocs       = "allocs"
-	threadcreate = "threadcreate"
-	metrics      = "metrics"
-	profile      = "profile"
+	cpu            = "cpu"
+	heap           = "heap"
+	block          = "block"
+	mutex          = "mutex"
+	goroutine      = "goroutine"
+	allocs         = "allocs"
+	threadcreate   = "threadcreate"
+	metrics        = "metrics"
+	profile        = "profile"
+	GoProfiler     = "go_profiler"
+	RunTimeMetrics = "runtime_metrics"
 )
 
 const (
@@ -47,26 +49,30 @@ var (
 )
 
 type commonData struct {
-	Timestamp int64  `json:"timestamp,omitempty"`
-	Type      string `json:"type,omitempty"`
 	PID       int    `json:"pid,omitempty"`
+	Timestamp int64  `json:"time,omitempty"`
+	Type      string `json:"type,omitempty"`
 	Service   string `json:"service,omitempty"`
 	GoVersion string `json:"go_version,omitempty"`
-	Hostname  string `json:"hostname,omitempty"`
+	Hostname  string `json:"_hostname,omitempty"`
+	DocType   string `json:"_documentType,omitempty"`
+	Plugin    string `json:"_plugin,omitempty"`
 }
 
 type Config struct {
-	duration     time.Duration
-	interval     time.Duration
-	profileTypes []string
-	cancel       context.CancelFunc
-	outProfile   chan profileData
-	outMetrics   chan metricsData
-	service      string
-	dumpToFile   bool
-	targetURL    string
-	customTarget bool
-	logf         func(format string, v ...interface{})
+	collectProfiles bool
+	collectMetrics  bool
+	duration        time.Duration
+	interval        time.Duration
+	profileTypes    []string
+	cancel          context.CancelFunc
+	outProfile      chan profileData
+	outMetrics      chan metricsData
+	service         string
+	dumpToFile      bool
+	targetURL       string
+	customTarget    bool
+	logf            func(format string, v ...interface{})
 }
 
 // NewProfilerConfig returns profiler config
@@ -74,17 +80,29 @@ type Config struct {
 // Accepts service name as argument, service name is required for identification
 func NewProfilerConfig(service string) *Config {
 	return &Config{
-		service:      service,
-		duration:     DefaultCPUProfileDuration,
-		interval:     DefaultProfileInterval,
-		profileTypes: defaultProfiles,
-		outProfile:   make(chan profileData, len(allProfiles)+1),
-		outMetrics:   make(chan metricsData, 1),
-		dumpToFile:   false,
-		targetURL:    DefaultAgentURL,
-		customTarget: false,
-		logf:         defaultlogf,
+		collectProfiles: true,
+		collectMetrics:  true,
+		service:         service,
+		duration:        DefaultCPUProfileDuration,
+		interval:        DefaultProfileInterval,
+		profileTypes:    defaultProfiles,
+		outProfile:      make(chan profileData, len(allProfiles)+1),
+		outMetrics:      make(chan metricsData, 1),
+		dumpToFile:      false,
+		targetURL:       DefaultAgentURL,
+		customTarget:    false,
+		logf:            defaultlogf,
 	}
+}
+
+// DisableProfiles disables all profile collection
+func (cfg *Config) DisableProfiles() {
+	cfg.collectProfiles = false
+}
+
+// DisableRuntimeMetrics disables runtime metric collection
+func (cfg *Config) DisableRuntimeMetrics() {
+	cfg.collectMetrics = false
 }
 
 // SetInterval sets interval between profiles collection

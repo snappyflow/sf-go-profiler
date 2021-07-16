@@ -71,7 +71,7 @@ func getProfile(name string, buff *bytes.Buffer) error {
 	return nil
 }
 
-func (cfg *Config) collectProfiles(ctx context.Context) {
+func (cfg *Config) gatherProfiles(ctx context.Context) {
 	ticker := time.NewTicker(cfg.interval)
 	defer ticker.Stop()
 
@@ -96,6 +96,8 @@ func (cfg *Config) collectProfiles(ctx context.Context) {
 
 				p.Timestamp = unixMillNow()
 				p.Type = profile
+				p.DocType = profile
+				p.Plugin = GoProfiler
 				p.PID = pid
 				p.GoVersion = v
 				p.Hostname = hostname
@@ -131,15 +133,19 @@ func (cfg *Config) Start() {
 	var ctx context.Context
 	ctx, cfg.cancel = context.WithCancel(context.Background())
 	// start publish
-	if cfg.dumpToFile {
-		go cfg.writeToFile(ctx)
-	} else {
-		go cfg.sendToAgent(ctx)
+	if cfg.collectProfiles {
+		if cfg.dumpToFile {
+			go cfg.writeToFile(ctx)
+		} else {
+			go cfg.sendToAgent(ctx)
+		}
+		// start profiler
+		go cfg.gatherProfiles(ctx)
 	}
-	// start profiler
-	go cfg.collectProfiles(ctx)
 	// start runtime metrics collector
-	go cfg.collectRuntimeMetrics(ctx)
+	if cfg.collectMetrics {
+		go cfg.collectRuntimeMetrics(ctx)
+	}
 }
 
 // Stop profile collection
