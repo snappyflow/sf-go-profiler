@@ -73,8 +73,8 @@ func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 			d.GoVersion = v
 			d.Hostname = hostname
 			d.Service = cfg.service
-			d.DocType = RunTimeMetrics
-			d.Plugin = GoProfiler
+			d.DocType = runTimeMetrics
+			d.Plugin = goProfiler
 			d.Timestamp = unixMillNow()
 
 			d.NumGoroutines = runtime.NumGoroutine()

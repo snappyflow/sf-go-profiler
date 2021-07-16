@@ -97,7 +97,7 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 				p.Timestamp = unixMillNow()
 				p.Type = profile
 				p.DocType = profile
-				p.Plugin = GoProfiler
+				p.Plugin = goProfiler
 				p.PID = pid
 				p.GoVersion = v
 				p.Hostname = hostname

@@ -17,8 +17,8 @@ const (
 	threadcreate   = "threadcreate"
 	metrics        = "metrics"
 	profile        = "profile"
-	GoProfiler     = "go_profiler"
-	RunTimeMetrics = "runtime_metrics"
+	goProfiler     = "go_profiler"
+	runTimeMetrics = "runtime_metrics"
 )
 
 const (
