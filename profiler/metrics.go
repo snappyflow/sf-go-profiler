@@ -5,8 +5,18 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"strconv"
 	"time"
 )
+
+type FloatZero float64
+
+func (f FloatZero) MarshalJSON() ([]byte, error) {
+	if float64(f) == float64(int(f)) {
+		return []byte(strconv.FormatFloat(float64(f), 'f', 1, 64)), nil
+	}
+	return []byte(strconv.FormatFloat(float64(f), 'f', 4, 64)), nil
+}
 
 type metricsData struct {
 	commonData
@@ -14,19 +24,19 @@ type metricsData struct {
 	NumCPU        int `json:"num_cpu,omitempty"`
 	NumGoroutines int `json:"num_goroutines,omitempty"`
 
-	Alloc       uint64 `json:"alloc,omitempty"`
-	TotalAlloc  uint64 `json:"total_alloc,omitempty"`
-	Sys         uint64 `json:"sys,omitempty"`
-	Mallocs     uint64 `json:"mallocs,omitempty"`
-	Frees       uint64 `json:"frees,omitempty"`
-	LiveObjects uint64 `json:"live_objects,omitempty"`
+	AllocMB      FloatZero `json:"alloc_mb,omitempty"`
+	TotalAllocMB FloatZero `json:"total_alloc_mb,omitempty"`
+	SysMB        FloatZero `json:"sys_mb,omitempty"`
+	Mallocs      uint64    `json:"mallocs,omitempty"`
+	Frees        uint64    `json:"frees,omitempty"`
+	LiveObjects  uint64    `json:"live_objects,omitempty"`
 
-	NumGC          uint32  `json:"num_gc,omitempty"`
-	NumForcedGC    uint32  `json:"num_forced_gc,omitempty"`
-	LastGC         uint64  `json:"last_gc,omitempty"`
-	TotalPauseGcMs float64 `json:"total_pause_gc_ms,omitempty"`
-	MaxPauseGcMs   float64 `json:"max_pause_gc_ms,omitempty"`
-	MinPauseGcMs   float64 `json:"min_pause_gc_ms,omitempty"`
+	NumGC          uint32    `json:"num_gc,omitempty"`
+	NumForcedGC    uint32    `json:"num_forced_gc,omitempty"`
+	LastGC         uint64    `json:"last_gc,omitempty"`
+	TotalPauseGcMs FloatZero `json:"total_pause_gc_ms,omitempty"`
+	MaxPauseGcMs   FloatZero `json:"max_pause_gc_ms,omitempty"`
+	MinPauseGcMs   FloatZero `json:"min_pause_gc_ms,omitempty"`
 }
 
 func minmaxPauseNs(pauseNs []uint64, prev, cur uint32) (uint64, uint64) {
@@ -47,6 +57,10 @@ func minmaxPauseNs(pauseNs []uint64, prev, cur uint32) (uint64, uint64) {
 func round(n float64, i int) float64 {
 	pow := math.Pow10(i)
 	return math.Round(n*pow) / pow
+}
+
+func bytesToMB(n uint64) float64 {
+	return float64(n) / 1024.0 / 1024.0
 }
 
 func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
@@ -83,21 +97,21 @@ func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 			var cur runtime.MemStats
 			runtime.ReadMemStats(&cur)
 			// heap
-			d.Alloc = cur.Alloc
-			d.TotalAlloc = cur.TotalAlloc
-			d.Sys = cur.Sys
-			d.Mallocs = cur.Mallocs
-			d.Frees = cur.Frees
+			d.AllocMB = FloatZero(bytesToMB(cur.Alloc))
+			d.SysMB = FloatZero(bytesToMB(cur.Sys))
+			d.TotalAllocMB = FloatZero(bytesToMB(cur.TotalAlloc - prev.TotalAlloc))
+			d.Mallocs = cur.Mallocs - prev.Mallocs
+			d.Frees = cur.Frees - prev.Frees
 			d.LiveObjects = cur.Mallocs - cur.Frees
 			// gc
 			d.NumGC = cur.NumGC - prev.NumGC
 			d.NumForcedGC = cur.NumForcedGC - prev.NumForcedGC
 			d.LastGC = cur.LastGC / 1e6
-			d.TotalPauseGcMs = float64(cur.PauseTotalNs-prev.PauseTotalNs) / 1e6
+			d.TotalPauseGcMs = FloatZero(cur.PauseTotalNs-prev.PauseTotalNs) / 1e6
 			// find min and max gc pause duration
 			min, max := minmaxPauseNs(cur.PauseNs[:], prev.NumGC, cur.NumGC)
-			d.MinPauseGcMs = float64(min) / 1e6
-			d.MaxPauseGcMs = float64(max) / 1e6
+			d.MinPauseGcMs = FloatZero(float64(min) / 1e6)
+			d.MaxPauseGcMs = FloatZero(float64(max) / 1e6)
 			// save current memstat values
 			prev = cur
 
