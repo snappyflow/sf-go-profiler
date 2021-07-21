@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,13 +22,15 @@ func (cfg *Config) detectTargetURL(ctx context.Context) string {
 	if cfg.customTarget {
 		return cfg.targetURL
 	}
+
+	var err error
 	// logic to detect default url
 	// needed for deciding data sent to forwarder or agent
-	var err error
 	err = checkTarget(ctx, DefaultClusterForwarderURL)
 	if err == nil {
 		cfg.targetURL = DefaultClusterForwarderURL
 	}
+
 	err = checkTarget(ctx, DefaultAgentURL)
 	if err == nil {
 		cfg.targetURL = DefaultAgentURL
@@ -38,7 +39,6 @@ func (cfg *Config) detectTargetURL(ctx context.Context) string {
 }
 
 func (cfg *Config) sendToAgent(ctx context.Context) {
-
 	target := cfg.detectTargetURL(ctx)
 	cfg.logf("sending profile data to url %s", target)
 
@@ -46,6 +46,7 @@ func (cfg *Config) sendToAgent(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+
 		case p := <-cfg.outProfile:
 			tmp := make([]byte, len(p.Profile))
 			copy(tmp, p.Profile)
@@ -68,13 +69,11 @@ func (cfg *Config) sendToAgent(ctx context.Context) {
 			} else {
 				cfg.logf("sent metrics collected at %d", m.Timestamp)
 			}
-
 		}
 	}
 }
 
 func pushToAgent(ctx context.Context, target string, data interface{}) error {
-
 	body, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -84,33 +83,40 @@ func pushToAgent(ctx context.Context, target string, data interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := httpclient.Do(req)
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("failed to send data " + resp.Status)
+		return fmt.Errorf("failed to send data %s", resp.Status)
 	}
 
 	return nil
 }
 
 func checkTarget(ctx context.Context, target string) error {
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := httpclient.Do(req)
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
+		return fmt.Errorf(resp.Status)
 	}
 
 	return nil
@@ -143,7 +149,8 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 				DefaultProfilesDir,
 				fmt.Sprintf("%s_%d_%d.%s", cfg.service, p.Timestamp, p.PID, p.ProfileType),
 			)
-			err := ioutil.WriteFile(file, p.Profile, 0644)
+
+			err := ioutil.WriteFile(file, p.Profile, 0600)
 			if err != nil {
 				cfg.logf("failed to write profile %s, %s", p.ProfileType, err)
 			}
@@ -153,16 +160,17 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 				DefaultProfilesDir,
 				fmt.Sprintf("%s_%d_%d.json", cfg.service, m.Timestamp, m.PID),
 			)
+
 			data, err := json.MarshalIndent(m, "", "  ")
 			if err != nil {
 				cfg.logf("failed to marshal metrics data %s", err)
 				break
 			}
-			err = ioutil.WriteFile(file, data, 0644)
+
+			err = ioutil.WriteFile(file, data, 0600)
 			if err != nil {
 				cfg.logf("failed to write metrics %s", err)
 			}
-
 		}
 	}
 }
@@ -170,6 +178,7 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 func (cfg *Config) removeOldFiles(ctx context.Context) {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -179,8 +188,9 @@ func (cfg *Config) removeOldFiles(ctx context.Context) {
 			if err != nil {
 				cfg.logf("failed to read directory %s", err)
 			}
+
 			for _, f := range files {
-				if time.Now().Sub(f.ModTime()) > DefaultProfilesAge {
+				if time.Since(f.ModTime()) > DefaultProfilesAge {
 					err := os.Remove(path.Join(DefaultProfilesDir, f.Name()))
 					if err != nil {
 						cfg.logf("failed to remove file %s", err)

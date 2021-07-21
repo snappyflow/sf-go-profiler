@@ -1,4 +1,4 @@
-// profiler enables collecting supported profiles types by golang
+// Package profiler enables collecting supported profiles types by golang
 // and sends them to SnappyFlowAPM for further visualization and analysis.
 //
 // supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate
@@ -9,7 +9,7 @@ package profiler
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -29,14 +29,6 @@ func sleepWithContext(ctx context.Context, delay time.Duration) {
 	}
 }
 
-func getEnv(key, fallback string) string {
-	value, exists := os.LookupEnv(key)
-	if !exists {
-		value = fallback
-	}
-	return value
-}
-
 func unixMillNow() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
@@ -46,8 +38,11 @@ func cpuprofile(ctx context.Context, duration time.Duration, buff *bytes.Buffer)
 	if err != nil {
 		return err
 	}
+
 	sleepWithContext(ctx, duration)
+
 	pprof.StopCPUProfile()
+
 	return nil
 }
 
@@ -62,13 +57,10 @@ func cpuprofile(ctx context.Context, duration time.Duration, buff *bytes.Buffer)
 func getProfile(name string, buff *bytes.Buffer) error {
 	prof := pprof.Lookup(name)
 	if prof == nil {
-		return errors.New("not found")
+		return fmt.Errorf("%s profile not found", name)
 	}
-	err := prof.WriteTo(buff, 0)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return prof.WriteTo(buff, 0)
 }
 
 func (cfg *Config) gatherProfiles(ctx context.Context) {
@@ -77,6 +69,7 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 
 	pid := os.Getpid()
 	v := runtime.Version()
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		cfg.logf("failed to get hostname %s", err)
@@ -88,11 +81,13 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+
 		case <-ticker.C:
 			for _, t := range cfg.profileTypes {
-
-				var p profileData
-				var err error
+				var (
+					p   profileData
+					err error
+				)
 
 				p.Timestamp = unixMillNow()
 				p.Type = profile
@@ -115,6 +110,7 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 				case heap, block, mutex, goroutine, allocs, threadcreate:
 					err = getProfile(t, buff)
 				}
+
 				if err != nil {
 					cfg.logf("failed to collect %s profile, %s", t, err)
 					continue
@@ -123,14 +119,14 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 				p.Profile = buff.Bytes()
 				// send data
 				cfg.outProfile <- p
-				//wait till profile is processed
+				// wait till profile is processed
 				<-cfg.ackProfile
 			}
 		}
 	}
 }
 
-// Start profile collection routines
+// Start profile collection routines.
 func (cfg *Config) Start() {
 	var ctx context.Context
 	ctx, cfg.cancel = context.WithCancel(context.Background())
@@ -150,7 +146,7 @@ func (cfg *Config) Start() {
 	}
 }
 
-// Stop profile collection
+// Stop profile collection.
 func (cfg *Config) Stop() {
 	cfg.cancel()
 }
