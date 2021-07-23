@@ -133,8 +133,7 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 		if err != nil {
 			cfg.logf("failed to create directory %s", err)
 		}
-	}
-	if err != nil {
+	} else if err != nil {
 		cfg.logf("failed to list directory %s", err)
 	}
 
@@ -154,6 +153,8 @@ func (cfg *Config) writeToFile(ctx context.Context) {
 			if err != nil {
 				cfg.logf("failed to write profile %s, %s", p.ProfileType, err)
 			}
+			// ack profile received
+			cfg.ackProfile <- struct{}{}
 
 		case m := <-cfg.outMetrics:
 			file := path.Join(

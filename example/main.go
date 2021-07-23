@@ -11,9 +11,7 @@ import (
 	"github.com/snappyflow/sf-go-profiler/profiler"
 )
 
-var (
-	mem [][]byte
-)
+var mem [][]byte
 
 //go:noinline
 func fibonacci1(n int) {
@@ -22,7 +20,7 @@ func fibonacci1(n int) {
 			continue
 		}
 
-		var n2, n1 = big.NewInt(0), big.NewInt(1)
+		n2, n1 := big.NewInt(0), big.NewInt(1)
 
 		for i := 1; i < j; i++ {
 			n2.Add(n2, n1)
@@ -76,7 +74,10 @@ func main() {
 	profile.SetInterval(30)
 	profile.SetCPUProfileDuration(5)
 	profile.EnableAllProfiles()
-	// profile.WriteProfileToFile()
+	profile.WriteProfileToFile()
+	profile.SetLogger(func(format string, v ...interface{}) {
+		fmt.Printf(format+"\n", v...)
+	})
 	profile.Start()
 	defer profile.Stop()
 
@@ -111,6 +112,21 @@ func main() {
 		}
 	}(done)
 
+	go func(done chan struct{}) {
+		timer := time.NewTicker(time.Second)
+		defer timer.Stop()
+		for {
+			select {
+			case <-timer.C:
+				// allocate1()
+				// allocate2()
+				allocate3()
+			case <-done:
+				return
+			}
+		}
+	}(done)
+
 	// go func(done chan struct{}) {
 	// 	timer := time.NewTicker(5 * time.Second)
 	// 	defer timer.Stop()
@@ -136,5 +152,4 @@ func main() {
 	// if err := pprof.WriteHeapProfile(h); err != nil {
 	// 	log.Fatal("could not write memory profile: ", err)
 	// }
-
 }
