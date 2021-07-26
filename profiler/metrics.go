@@ -37,6 +37,7 @@ type metricsData struct {
 	TotalPauseGcMs floatZero `json:"total_pause_gc_ms,omitempty"`
 	MaxPauseGcMs   floatZero `json:"max_pause_gc_ms,omitempty"`
 	MinPauseGcMs   floatZero `json:"min_pause_gc_ms,omitempty"`
+	GcCPUFraction  floatZero `json:"gc_cpu_fraction,omitempty"`
 }
 
 func minmaxPauseNs(pauseNs []uint64, prev, cur uint32) (uint64, uint64) {
@@ -105,6 +106,7 @@ func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 			// gc
 			d.NumGC = cur.NumGC - prev.NumGC
 			d.NumForcedGC = cur.NumForcedGC - prev.NumForcedGC
+			d.GcCPUFraction = floatZero(cur.GCCPUFraction)
 			d.LastGC = cur.LastGC / 1e6
 			d.TotalPauseGcMs = floatZero(cur.PauseTotalNs-prev.PauseTotalNs) / 1e6
 			// find min and max gc pause duration

@@ -18,14 +18,17 @@ import (
 
 type profileData struct {
 	commonData
-	Profile     []byte `json:"data,omitempty"`
+	Profile     []byte `json:"pprof,omitempty"`
 	ProfileType string `json:"profile_type,omitempty"`
 }
 
 func sleepWithContext(ctx context.Context, delay time.Duration) {
+	timer := time.NewTimer(delay)
 	select {
 	case <-ctx.Done():
-	case <-time.After(delay):
+		timer.Stop()
+	case <-timer.C:
+		timer.Stop()
 	}
 }
 
@@ -45,14 +48,6 @@ func cpuprofile(ctx context.Context, duration time.Duration, buff *bytes.Buffer)
 
 	return nil
 }
-
-// func heap(buff *bytes.Buffer) error {
-// 	err := pprof.WriteHeapProfile(buff)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
 
 func getProfile(name string, buff *bytes.Buffer) error {
 	prof := pprof.Lookup(name)
@@ -83,7 +78,13 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 			return
 
 		case <-ticker.C:
-			for _, t := range cfg.profileTypes {
+			for _, t := range allProfiles {
+
+				// skip profiles not enabled
+				if enabled := cfg.enabled[t]; !enabled {
+					continue
+				}
+
 				var (
 					p   profileData
 					err error
@@ -105,9 +106,7 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 				switch t {
 				case cpu:
 					err = cpuprofile(ctx, cfg.duration, buff)
-				// case Heap:
-				// 	err = heap(buffer)
-				case heap, block, mutex, goroutine, allocs, threadcreate:
+				case heap, block, mutex, goroutine, threadcreate:
 					err = getProfile(t, buff)
 				}
 

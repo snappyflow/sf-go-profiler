@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -39,13 +40,28 @@ const (
 
 	// DefaultProfileInterval is the  default intervals at which profiles are collected.
 	DefaultProfileInterval = 60 * time.Second
+
+	// DefaultMutexProfileFraction
+	// check https://pkg.go.dev/runtime#SetMutexProfileFraction
+	DefaultMutexProfileFraction = 100
+
+	// DefaultBlockProfileRate
+	// check https://pkg.go.dev/runtime#SetBlockProfileRate
+	DefaultBlockProfileRate = 10000
 )
 
 var (
-	allProfiles     = []string{threadcreate, block, mutex, goroutine, allocs, heap, cpu}
-	defaultProfiles = []string{heap, cpu}
-	logger          = log.New(os.Stdout, "[go profiler] ", log.Ldate|log.Ltime|log.Lshortfile|log.Lmicroseconds)
-	defaultlogf     = func(format string, v ...interface{}) { logger.Printf(format+"\n", v...) }
+	allProfiles     = []string{threadcreate, block, mutex, goroutine, heap, cpu}
+	defaultProfiles = map[string]bool{
+		threadcreate: false,
+		block:        false,
+		mutex:        false,
+		goroutine:    false,
+		heap:         true,
+		cpu:          true,
+	}
+	logger      = log.New(os.Stdout, "[go profiler] ", log.Ldate|log.Ltime|log.Lshortfile|log.Lmicroseconds)
+	defaultlogf = func(format string, v ...interface{}) { logger.Printf(format+"\n", v...) }
 )
 
 type commonData struct {
@@ -62,12 +78,12 @@ type commonData struct {
 // Config for profiling.
 type Config struct {
 	service         string
-	profileTypes    []string
 	targetURL       string
 	customTarget    bool
 	dumpToFile      bool
 	collectMetrics  bool
 	collectProfiles bool
+	enabled         map[string]bool
 	ackProfile      chan struct{}
 	outProfile      chan profileData
 	outMetrics      chan metricsData
@@ -88,7 +104,7 @@ func NewProfilerConfig(service string) *Config {
 		service:         service,
 		duration:        DefaultCPUProfileDuration,
 		interval:        DefaultProfileInterval,
-		profileTypes:    defaultProfiles,
+		enabled:         defaultProfiles,
 		outProfile:      make(chan profileData, 1),
 		outMetrics:      make(chan metricsData, 1),
 		dumpToFile:      false,
@@ -108,7 +124,7 @@ func (cfg *Config) DisableRuntimeMetrics() {
 	cfg.collectMetrics = false
 }
 
-// SetInterval sets interval between profiles collection.
+// SetInterval sets interval in seconds between profiles collection.
 func (cfg *Config) SetInterval(i int) {
 	cfg.interval = time.Duration(i) * time.Second
 }
@@ -119,28 +135,38 @@ func (cfg *Config) SetCPUProfileDuration(i int) {
 }
 
 // EnableBlockProfile enables block profile.
-func (cfg *Config) EnableBlockProfile() {
-	cfg.profileTypes = append(cfg.profileTypes, block)
+//
+// https://pkg.go.dev/runtime#SetBlockProfileRate
+func (cfg *Config) EnableBlockProfile(rate int) {
+	runtime.SetBlockProfileRate(rate)
+	cfg.enabled[block] = true
 }
 
 // EnableMutexProfile enables mutex profile.
-func (cfg *Config) EnableMutexProfile() {
-	cfg.profileTypes = append(cfg.profileTypes, mutex)
+//
+// https://pkg.go.dev/runtime#SetMutexProfileFraction
+func (cfg *Config) EnableMutexProfile(rate int) {
+	runtime.SetMutexProfileFraction(rate)
+	cfg.enabled[mutex] = true
 }
 
 // EnableGoRoutineProfile enables goroutine profile.
 func (cfg *Config) EnableGoRoutineProfile() {
-	cfg.profileTypes = append(cfg.profileTypes, goroutine)
+	cfg.enabled[goroutine] = true
 }
 
 // EnableThreadCreateProfile enables threadcreate profile.
 func (cfg *Config) EnableThreadCreateProfile() {
-	cfg.profileTypes = append(cfg.profileTypes, threadcreate)
+	cfg.enabled[threadcreate] = true
 }
 
 // EnableAllProfiles enables all currently supported profile types.
 func (cfg *Config) EnableAllProfiles() {
-	cfg.profileTypes = allProfiles
+	runtime.SetBlockProfileRate(DefaultBlockProfileRate)
+	runtime.SetMutexProfileFraction(DefaultMutexProfileFraction)
+	for k, _ := range cfg.enabled {
+		cfg.enabled[k] = true
+	}
 }
 
 // WriteProfileToFile writes all collected profiles to file to DefaultProfilesDir directory,
