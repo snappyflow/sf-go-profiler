@@ -42,8 +42,7 @@ type metricsData struct {
 
 func minmaxPauseNs(pauseNs []uint64, prev, cur uint32) (uint64, uint64) {
 	pause := pauseNs[(prev+1+255)%256]
-	min := pause
-	max := pause
+	min, max := pause, pause
 
 	for i := prev + 1; i <= cur; i++ {
 		if max < pauseNs[i] {
@@ -89,6 +88,7 @@ func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 			d.DocType = runTimeMetrics
 			d.Plugin = goProfiler
 			d.Timestamp = unixMillNow()
+			d.Interval = int(cfg.interval / time.Second)
 
 			d.NumGoroutines = runtime.NumGoroutine()
 			d.NumCPU = runtime.NumCPU()

@@ -18,6 +18,7 @@ import (
 
 type profileData struct {
 	commonData
+	Duration    int    `json:"duration,omitempty"`
 	Profile     []byte `json:"pprof,omitempty"`
 	ProfileType string `json:"profile_type,omitempty"`
 }
@@ -99,12 +100,14 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 				p.Hostname = hostname
 				p.Service = cfg.service
 				p.ProfileType = t
+				p.Interval = int(cfg.interval / time.Second)
 
 				buff.Reset()
 
 				// collect profile
 				switch t {
 				case cpu:
+					p.Duration = int(cfg.duration / time.Second)
 					err = cpuprofile(ctx, cfg.duration, buff)
 				case heap, block, mutex, goroutine, threadcreate:
 					err = getProfile(t, buff)

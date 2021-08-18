@@ -73,6 +73,7 @@ type commonData struct {
 	Hostname  string `json:"_hostname,omitempty"`
 	DocType   string `json:"_documentType,omitempty"`
 	Plugin    string `json:"_plugin,omitempty"`
+	Interval  int    `json:"interval,omitempty"`
 }
 
 // Config for profiling.
