@@ -20,6 +20,7 @@ const (
 	profile        = "profile"
 	goProfiler     = "go_profiler"
 	runTimeMetrics = "runtime_metrics"
+	golang         = "golang"
 )
 
 const (
@@ -74,6 +75,7 @@ type commonData struct {
 	DocType   string `json:"_documentType,omitempty"`
 	Plugin    string `json:"_plugin,omitempty"`
 	Interval  int    `json:"interval,omitempty"`
+	Language  string `json:"language,omitempty"`
 }
 
 // Config for profiling.

@@ -80,6 +80,7 @@ func (cfg *Config) collectRuntimeMetrics(ctx context.Context) {
 			return
 		case <-ticker.C:
 			var d metricsData
+			d.Language = golang
 			d.Type = metrics
 			d.PID = pid
 			d.GoVersion = v

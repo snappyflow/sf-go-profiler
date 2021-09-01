@@ -91,6 +91,7 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 					err error
 				)
 
+				p.Language = golang
 				p.Timestamp = unixMillNow()
 				p.Type = profile
 				p.DocType = profile
