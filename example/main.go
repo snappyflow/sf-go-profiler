@@ -71,13 +71,13 @@ func deallocate() {
 
 func main() {
 	profile := profiler.NewProfilerConfig("test")
-	profile.SetInterval(30)
-	profile.SetCPUProfileDuration(5)
-	profile.EnableAllProfiles()
-	profile.WriteProfileToFile()
-	profile.SetLogger(func(format string, v ...interface{}) {
-		fmt.Printf(format+"\n", v...)
-	})
+	// profile.SetInterval(30)
+	// profile.SetCPUProfileDuration(5)
+	// profile.EnableAllProfiles()
+	// // profile.WriteProfileToFile()
+	// profile.SetLogger(func(format string, v ...interface{}) {
+	// 	fmt.Printf(format+"\n", v...)
+	// })
 	profile.Start()
 	defer profile.Stop()
 
@@ -127,18 +127,18 @@ func main() {
 		}
 	}(done)
 
-	// go func(done chan struct{}) {
-	// 	timer := time.NewTicker(5 * time.Second)
-	// 	defer timer.Stop()
-	// 	for {
-	// 		select {
-	// 		case <-timer.C:
-	// 			deallocate()
-	// 		case <-done:
-	// 			return
-	// 		}
-	// 	}
-	// }(done)
+	go func(done chan struct{}) {
+		timer := time.NewTicker(5 * time.Second)
+		defer timer.Stop()
+		for {
+			select {
+			case <-timer.C:
+				fibonacci1(100000000)
+			case <-done:
+				return
+			}
+		}
+	}(done)
 
 	<-killSignal
 	close(done)

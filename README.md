@@ -9,6 +9,8 @@ cpu and heap profiles are enabled always other types can be enabled as required.
 
 ## getting started
 
+- simple example
+
 ```go
 import "github.com/snappyflow/sf-go-profiler/profiler"
 
@@ -19,6 +21,27 @@ main(){
     // rest of the application code
 }
 ```
+
+- profiling can conditionally enabled when required using flags
+
+```go
+import (
+    "github.com/snappyflow/sf-go-profiler/profiler"
+    "flag"
+)
+
+main(){
+    enableprofile := flag.Bool("debug",false,"enable profiler")
+    if *enableprofile {
+        profile := profiler.NewProfilerConfig("server")
+        profile.Start()
+        defer profile.Stop()
+    }
+    // rest of the application code
+}
+```
+
+- runtime metrics can be disable by calling **DisableRuntimeMetrics()** similarly profiling can be disabled by calling **DisableProfiles()** on profile config object.
 
 ## documentation
 
