@@ -31,7 +31,7 @@ import (
 )
 
 main(){
-    enableprofile := flag.Bool("debug",false,"enable profiler")
+    enableprofile := flag.Bool("profile",false,"enable profiler")
     if *enableprofile {
         profile := profiler.NewProfilerConfig("server")
         profile.Start()
