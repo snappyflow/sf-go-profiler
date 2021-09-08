@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/big"
 	"os"
@@ -70,33 +71,28 @@ func deallocate() {
 }
 
 func main() {
-	profile := profiler.NewProfilerConfig("test")
-	// profile.SetInterval(30)
-	// profile.SetCPUProfileDuration(5)
-	// profile.EnableAllProfiles()
-	// // profile.WriteProfileToFile()
-	// profile.SetLogger(func(format string, v ...interface{}) {
-	// 	fmt.Printf(format+"\n", v...)
-	// })
-	profile.Start()
-	defer profile.Stop()
+	enableprofile := flag.Bool("profile", false, "enable profiler")
+	if *enableprofile {
+		profile := profiler.NewProfilerConfig("test")
+		// profile.SetInterval(30)
+		// profile.SetCPUProfileDuration(5)
+		// profile.EnableAllProfiles()
+		// // profile.WriteProfileToFile()
+		// profile.SetLogger(func(format string, v ...interface{}) {
+		// 	fmt.Printf(format+"\n", v...)
+		// })
+		profile.Start()
+		defer profile.Stop()
+	}
+	fmt.Println("DO NOT RUN THIS FOR LONG TIME")
 
 	killSignal := make(chan os.Signal, 1)
 
 	signal.Notify(killSignal, os.Interrupt, os.Kill, syscall.SIGTERM)
 
-	// c, err := os.Create("cpu.pb.gz")
-	// if err != nil {
-	// 	log.Fatal("could not create file for cpu profile: ", err)
-	// }
-	// defer c.Close()
-	// if err := pprof.StartCPUProfile(c); err != nil {
-	// 	log.Fatal("could not start CPU profile: ", err)
-	// }
-	// defer pprof.StopCPUProfile()
-
 	done := make(chan struct{})
 
+	// allocate memory
 	go func(done chan struct{}) {
 		timer := time.NewTicker(time.Second)
 		defer timer.Stop()
@@ -127,6 +123,7 @@ func main() {
 		}
 	}(done)
 
+	// use cpu
 	go func(done chan struct{}) {
 		timer := time.NewTicker(5 * time.Second)
 		defer timer.Stop()
@@ -140,16 +137,7 @@ func main() {
 		}
 	}(done)
 
+	// wait for kill signal
 	<-killSignal
 	close(done)
-
-	// h, err := os.Create("heap.pb.gz")
-	// if err != nil {
-	// 	log.Fatal("could not create file for heap profile: ", err)
-	// }
-	// defer h.Close()
-	// runtime.GC() // get up-to-date statistics
-	// if err := pprof.WriteHeapProfile(h); err != nil {
-	// 	log.Fatal("could not write memory profile: ", err)
-	// }
 }
