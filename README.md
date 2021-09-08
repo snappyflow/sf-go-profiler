@@ -71,6 +71,8 @@ main(){
 
 ## sample runtime metrics collected
 
+- reference: <https://pkg.go.dev/runtime#MemStats>
+
 ```json
 {
   "_documentType": "runtime_metrics",
