@@ -9,11 +9,11 @@ supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate
 
 ## getting started
 
-- ### pre-requisite
+- **pre-requisite**
 
 install and configure snappyflow agent on vm or as a sidecar in the container, as it is required to send data to snappyflow-apm
 
-- simple example
+- **simple example**
 
 ```go
 import "github.com/snappyflow/sf-go-profiler/profiler"
