@@ -3,9 +3,13 @@
 sf-apm-profiler enables collecting supported profiles types by golang along with runtime metrics
 and sends them to snappyflow-apm for further visualization and analysis.
 
-supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate
+supported profiles: cpu, heap, block, mutex, goroutine, threadcreate
 
 **cpu** and **heap** profiles are enabled always other types can be enabled as required.
+
+- **godoc**: <https://pkg.go.dev/github.com/snappyflow/sf-go-profiler/profiler>
+
+- **sample code**: <https://github.com/snappyflow/sf-go-profiler/tree/main/example/main.go>
 
 ## getting started
 
@@ -66,13 +70,26 @@ main(){
     defer profile.Stop()
 ```
 
-## godoc
+- enable other supported profiles as required
 
-- <https://pkg.go.dev/github.com/snappyflow/sf-go-profiler/profiler>
+```go
+    // enable block profile and set given block profile rate
+    profile.EnableBlockProfile(100)
+    // enable mutex profile and set given mutex profile fraction
+    profile.EnableMutexProfile(1000)
+    // enable goroutine profile
+    profile.EnableGoRoutineProfile()
+    // enable threadcreate profile
+    profile.EnableThreadCreateProfile()
+```
 
-## sample code
+- since only heap and cpu profiles are enabled by default, all supported profiles can be enabled by call to function **EnableAllProfiles()**,
+this sets block profile rate to **DefaultBlockProfileRate** and mutex profile fraction to **DefaultMutexProfileFraction**
 
-- <https://github.com/snappyflow/sf-go-profiler/tree/main/example/main.go>
+```go
+    // enable all supported profiles
+    profile.EnableAllProfiles()
+```
 
 ## sample runtime metrics collected
 
@@ -80,19 +97,11 @@ main(){
 
 ```json
 {
-  "_documentType": "runtime_metrics",
-  "_hostname": "ip-172-31-88-98",
-  "_plugin": "go_profiler",
-  "_tag_Name": "dev",
-  "_tag_appName": "profiler-dev",
-  "_tag_projectName": "app",
-  "_tag_uuid": "02d03d81e525",
   "alloc_mb": 8.4275,
   "frees": 28575,
   "gc_cpu_fraction": 0.0001,
   "go_version": "go1.16.4",
   "interval": 60,
-  "language": "golang",
   "last_gc": 1631099627396,
   "live_objects": 27146,
   "mallocs": 27361,
@@ -102,11 +111,9 @@ main(){
   "num_gc": 2,
   "num_goroutines": 23,
   "pid": 23201,
-  "service": "test",
   "sys_mb": 71.5791,
   "time": 1631099686505,
   "total_alloc_mb": 8.8994,
   "total_pause_gc_ms": 0.14,
-  "type": "metrics"
 }
 ```

@@ -1,9 +1,3 @@
-// Package profiler enables collecting supported profiles types by golang
-// and sends them to SnappyFlowAPM for further visualization and analysis.
-//
-// supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate
-//
-// cpu and heap profiles are enabled always other types can be enabled as required.
 package profiler
 
 import (
@@ -129,7 +123,7 @@ func (cfg *Config) gatherProfiles(ctx context.Context) {
 	}
 }
 
-// Start profile collection routines.
+// Start profile collection.
 func (cfg *Config) Start() {
 	var ctx context.Context
 	ctx, cfg.cancel = context.WithCancel(context.Background())

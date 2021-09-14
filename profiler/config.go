@@ -1,3 +1,9 @@
+// Package profiler enables collecting supported profiles types by golang
+// and sends them to SnappyFlowAPM for further visualization and analysis.
+//
+// supported profiles: cpu, heap, block, mutex, goroutine, allocs, threadcreate
+//
+// cpu and heap profiles are enabled always other types can be enabled as required.
 package profiler
 
 import (
@@ -24,8 +30,19 @@ const (
 )
 
 const (
-	// DefaultProfilesDir is the default directory where profiles are stored while writing to file.
-	DefaultProfilesDir = "./profiles"
+	// DefaultCPUProfileDuration is the default cpu profile duration in seconds.
+	DefaultCPUProfileDuration = 10 * time.Second
+
+	// DefaultProfileInterval is the  default intervals at which profiles are collected.
+	DefaultProfileInterval = 60 * time.Second
+
+	// DefaultMutexProfileFraction
+	// refer https://pkg.go.dev/runtime#SetMutexProfileFraction
+	DefaultMutexProfileFraction = 100
+
+	// DefaultBlockProfileRate
+	// refer https://pkg.go.dev/runtime#SetBlockProfileRate
+	DefaultBlockProfileRate = 10000
 
 	// DefaultProfilesAge is the time to preserve old profile files.
 	DefaultProfilesAge = 900 * time.Second
@@ -36,19 +53,8 @@ const (
 	// DefaultClusterForwarderURL default url to send profiles to agent.
 	DefaultClusterForwarderURL = "http://forwarder.sfagent.svc"
 
-	// DefaultCPUProfileDuration is the default cpu profile duration in seconds.
-	DefaultCPUProfileDuration = 10 * time.Second
-
-	// DefaultProfileInterval is the  default intervals at which profiles are collected.
-	DefaultProfileInterval = 60 * time.Second
-
-	// DefaultMutexProfileFraction
-	// check https://pkg.go.dev/runtime#SetMutexProfileFraction
-	DefaultMutexProfileFraction = 100
-
-	// DefaultBlockProfileRate
-	// check https://pkg.go.dev/runtime#SetBlockProfileRate
-	DefaultBlockProfileRate = 10000
+	// DefaultProfilesDir is the default directory where profiles are stored while writing to file.
+	DefaultProfilesDir = "./profiles"
 )
 
 var (
@@ -139,7 +145,9 @@ func (cfg *Config) SetCPUProfileDuration(i int) {
 
 // EnableBlockProfile enables block profile.
 //
-// https://pkg.go.dev/runtime#SetBlockProfileRate
+// Calls runtime.SetBlockProfileRate(rate) to set given rate of block profile.
+//
+// refer: https://pkg.go.dev/runtime#SetBlockProfileRate
 func (cfg *Config) EnableBlockProfile(rate int) {
 	runtime.SetBlockProfileRate(rate)
 	cfg.enabled[block] = true
@@ -147,23 +155,31 @@ func (cfg *Config) EnableBlockProfile(rate int) {
 
 // EnableMutexProfile enables mutex profile.
 //
-// https://pkg.go.dev/runtime#SetMutexProfileFraction
+// Calls runtime.SetMutexProfileFraction(rate) to set given mutex profile fraction.
+//
+// refer: https://pkg.go.dev/runtime#SetMutexProfileFraction
 func (cfg *Config) EnableMutexProfile(rate int) {
 	runtime.SetMutexProfileFraction(rate)
 	cfg.enabled[mutex] = true
 }
 
-// EnableGoRoutineProfile enables goroutine profile.
+// EnableGoRoutineProfile enables goroutine profile collection.
 func (cfg *Config) EnableGoRoutineProfile() {
 	cfg.enabled[goroutine] = true
 }
 
-// EnableThreadCreateProfile enables threadcreate profile.
+// EnableThreadCreateProfile enables threadcreate profile collection.
 func (cfg *Config) EnableThreadCreateProfile() {
 	cfg.enabled[threadcreate] = true
 }
 
-// EnableAllProfiles enables all currently supported profile types.
+// EnableAllProfiles enables all currently supported profiles collection.
+//
+// Enables cpu, heap, block, mutex, goroutine, threadcreate profiles collection.
+//
+// sets block profile rate to DefaultBlockProfileRate
+//
+// sets mutex profile fraction to DefaultMutexProfileFraction
 func (cfg *Config) EnableAllProfiles() {
 	runtime.SetBlockProfileRate(DefaultBlockProfileRate)
 	runtime.SetMutexProfileFraction(DefaultMutexProfileFraction)
