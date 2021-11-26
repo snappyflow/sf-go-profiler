@@ -4,4 +4,4 @@ go 1.16
 
 replace github.com/snappyflow/sf-go-profiler => ../
 
-require github.com/snappyflow/sf-go-profiler v0.2.4
+require github.com/snappyflow/sf-go-profiler v0.2.5
