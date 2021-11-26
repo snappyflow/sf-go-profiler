@@ -72,6 +72,7 @@ func deallocate() {
 
 func main() {
 	enableprofile := flag.Bool("profile", false, "enable profiler")
+	flag.Parse()
 	if *enableprofile {
 		profile := profiler.NewProfilerConfig("test")
 		// profile.SetInterval(30)

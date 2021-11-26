@@ -41,10 +41,11 @@ type metricsData struct {
 }
 
 func minmaxPauseNs(pauseNs []uint64, prev, cur uint32) (uint64, uint64) {
-	pause := pauseNs[(prev+1+255)%256]
+	start := (prev + 1 + 255) % 256
+	pause := pauseNs[start]
 	min, max := pause, pause
 
-	for i := prev + 1; i <= cur; i++ {
+	for i := start; i <= cur; i++ {
 		if max < pauseNs[i] {
 			max = pauseNs[i]
 		}
